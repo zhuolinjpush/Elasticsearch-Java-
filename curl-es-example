@@ -1,0 +1,103 @@
+
+/usr/bin/curl -XDELETE 'http://localhost/test_v1'
+
+===========================================================================================
+/usr/bin/curl -XPOST 'http://localhost/test_v1/' -d '{
+    "settings":{
+        "index":{
+            "number_of_shards":1,
+            "number_of_replicas":0
+        },
+        "analysis": {
+            "analyzer": {
+                "standard_analyzer": {
+                    "type": "standard",
+                    "stopwords": "|"
+                },
+                "simple_analyzer": {
+                    "type": "simple"
+                },
+                "whitespace_analyzer": {
+                    "type": "whitespace"
+                },
+                "keyword_analyzer":{
+                    "type": "keyword"
+                },
+                "pattern_analyzer":{
+                    "type": "pattern",
+                    "pattern": "abc+"
+                },
+                "my_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "myTokenizer",
+                    "filter": ["myfilter1"],
+                    "char_filter": ["myHtmlFilter"]
+                }
+            },
+            "tokenizer": {
+                "myTokenizer":{
+                    "type":"standard"
+                }
+            },
+            "filter": {
+                "myfilter1": {
+                    "type":"stop",
+                    "stopwords":["the", "|", "123"]
+                }
+            },
+            "char_filter": {
+                "myHtmlFilter": {
+                    "type":"html_strip"
+                }
+            }
+        }
+    } 
+}'
+
+curl -XPOST 'http://localhost/test_v1/_analyze?pretty=true&analyzer=standard_analyzer' -d 'com.Hjwordgames|mb.Enwordlearn|com.Candl.athena|com.qihoo.appstore|com.integer3d.toytruckrally|com.dragon.android.mobomarkeT'
+
+curl -XPOST 'http://localhost/test_v1/_analyze?pretty=true&analyzer=simple_analyzer' -d 'com.Hjwordgames the TEST'
+
+curl -XPOST 'http://localhost/test_v1/_analyze?pretty=true&analyzer=whitespace_analyzer' -d 'com.Hjwordgames the TEST'
+
+curl -XPOST 'http://localhost/test_v1/_analyze?pretty=true&analyzer=keyword_analyzer' -d 'An analyzer of type keyword that tokenizes an entire stream as a single token.'
+
+curl -XPOST 'http://localhost/test_v1/_analyze?pretty=true&analyzer=pattern_analyzer' -d 'Anabclyze123r of type 23keyabcword that tokenabcccizes an entire strea3m as a single token.'
+
+
+curl -XPOST 'http://localhost/test_v1/_analyze?pretty=true&analyzer=my_analyzer' -d 'the two <em>lazy</em> dogs, were test123one slower than handle|two the less lazy <em>dog</em>'
+
+
+
+
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "spanish_stop": {
+          "type":       "stop",
+          "stopwords":  "_spanish_" 
+        },
+        "spanish_keywords": {
+          "type":       "keyword_marker",
+          "keywords":   [] 
+        },
+        "spanish_stemmer": {
+          "type":       "stemmer",
+          "language":   "light_spanish"
+        }
+      },
+      "analyzer": {
+        "spanish": {
+          "tokenizer":  "standard",
+          "filter": [
+            "lowercase",
+            "spanish_stop",
+            "spanish_keywords",
+            "spanish_stemmer"
+          ]
+        }
+      }
+    }
+  }
+}
