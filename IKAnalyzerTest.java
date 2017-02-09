@@ -67,7 +67,7 @@ public class IKAnalyzerTest {
         logger.info("create es client");
     }
     
-    public void query(String[] indices, String appkey, String keyword, float min_score) {
+    public void query(String[] indices, String appkey, String keyword) {
         try {
             QueryBuilder queryBuilder = QueryBuilders.boolQuery().must(QueryBuilders.matchQuery("msg_content", keyword))
                                                                  .must(QueryBuilders.termQuery("appkey", appkey));
@@ -117,10 +117,10 @@ public class IKAnalyzerTest {
         
         String appkey = args[2];
         String keyword = args[3];//会被分词
-        float min_score = Float.parseFloat(args[4]);//score>=10分是完全符合的
+        //float min_score = Float.parseFloat(args[4]);
         
         IKAnalyzerTest analyzer = new IKAnalyzerTest();
-        analyzer.query(indices, appkey, keyword, min_score);
+        analyzer.query(indices, appkey, keyword);
         
     }
 
