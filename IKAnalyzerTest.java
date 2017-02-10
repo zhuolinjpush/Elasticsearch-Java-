@@ -4,6 +4,9 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeAction;
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeRequestBuilder;
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeResponse.AnalyzeToken;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
@@ -67,38 +70,39 @@ public class IKAnalyzerTest {
         logger.info("create es client");
     }
     
-    public void query(String[] indices, String appkey, String keyword) {
-        try {
-            QueryBuilder queryBuilder = QueryBuilders.boolQuery().must(QueryBuilders.matchQuery("msg_content", keyword))
-                                                                 .must(QueryBuilders.termQuery("appkey", appkey));
-                                                                 //.must(QueryBuilders.rangeQuery("itime").gte(start_ts).lt(end_ts));
-            SearchResponse response = client.prepareSearch(indices)
-                                           .setTypes(this._esIndexType)
-                                           .setQuery(queryBuilder)
-                                           .setSize(1) //get 1
-                                           .execute()
-                                           .actionGet();
-            //get max score
-            float maxScore = response.getHits().getMaxScore();
-            float minScore = maxScore * 0.7f;
+    public void query(String[] indices, String appkey, String keyword, String analyzer, float min_score, String minimumShouldMatch, float boost) {
+        try {        
+            //token 获取分词
+            AnalyzeRequestBuilder requestBuilder = new AnalyzeRequestBuilder(client, AnalyzeAction.INSTANCE);
+            List<AnalyzeToken> tokens = requestBuilder.setText(keyword).setAnalyzer(analyzer).execute().actionGet().getTokens();
+            for (AnalyzeToken token : tokens) {
+                logger.info("token term:" + token.getTerm());
+            }
             
-            response = client.prepareSearch(indices)
+            QueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.queryStringQuery(keyword).field("msg_content").analyzer(analyzer).minimumShouldMatch(minimumShouldMatch).boost(boost))
+                    .must(QueryBuilders.termQuery("appkey", appkey));
+            
+            SearchResponse response = client.prepareSearch(indices)
                     .setTypes(this._esIndexType)
                     .setQuery(queryBuilder)
-                    .setSize(1000) //get 1000
-                    .setMinScore(minScore)
+                    .setSize(100) //get 1000
+                    .setMinScore(min_score)
                     .execute()
                     .actionGet();
-            
-            int count = 0;
+            int count = 1;
             for (SearchHit hit : response.getHits().getHits()) {
                 logger.info( count++ + TAB + hit.getScore() + TAB + hit.getSourceAsString() );
             }
+      
 
         } catch (Exception e) {
             logger.error("query es error", e);
         } finally {
-            //
+            if (client != null) {
+                client.close();
+                client = null;
+            }
         }
         
     }
@@ -117,10 +121,12 @@ public class IKAnalyzerTest {
         
         String appkey = args[2];
         String keyword = args[3];//会被分词
-        //float min_score = Float.parseFloat(args[4]);
-        
-        IKAnalyzerTest analyzer = new IKAnalyzerTest();
-        analyzer.query(indices, appkey, keyword);
+        String analyzer = args[4];
+        float min_score = Float.parseFloat(args[5]);
+        String minimumShouldMatch = args[6];
+        float boost = Float.parseFloat(args[7]);
+        IKAnalyzerTest obj = new IKAnalyzerTest();
+        obj.query(indices, appkey, keyword, analyzer, min_score, minimumShouldMatch, boost);
         
     }
 
